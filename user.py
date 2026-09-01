@@ -44,6 +44,23 @@ class User:
             safe_execute("UPDATE users SET domain_verified=0, token_expiry=NULL WHERE telegram_id=?", (telegram_id,))
 
     @staticmethod
+    def update_domain_verified_batch(telegram_ids: list, status: int):
+        """Batch update status domain verification untuk mencegah N+1 query."""
+        if not telegram_ids:
+            return
+        placeholders = ",".join(["?"] * len(telegram_ids))
+        if status == 1:
+            safe_execute(
+                f"UPDATE users SET domain_verified=1, token_expiry=NULL, last_verified_at=CURRENT_TIMESTAMP WHERE telegram_id IN ({placeholders})",
+                tuple(telegram_ids)
+            )
+        else:
+            safe_execute(
+                f"UPDATE users SET domain_verified=0, token_expiry=NULL WHERE telegram_id IN ({placeholders})",
+                tuple(telegram_ids)
+            )
+
+    @staticmethod
     def update_role(telegram_id, role):
         safe_execute("UPDATE users SET role=? WHERE telegram_id=?", (role, telegram_id))
 

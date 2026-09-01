@@ -1,40 +1,8 @@
-#!/usr/bin/env python3
-"""
-PRODUCTION REQUIREMENTS - Lightweight & Railway-Ready
-Minimal dependencies, maximum stability
-"""
-
-# Core Telegram Bot
 pyTelegramBotAPI==4.16.0
-
-# Database & ORM (lightweight)
-python-dotenv==1.0.0
-
-# Scheduling (monthly check)
-schedule==1.2.0
-
-# DNS & Domain verification
 dnspython==2.4.2
 python-whois==0.8.0
-
-# HTTP requests (for payment proof verification)
 requests==2.31.0
-
-# Retry mechanism (exponential backoff)
+schedule==1.2.0
+python-dotenv==1.0.0
 tenacity==8.2.3
-
-# Timezone handling
 pytz==2024.1
-
-# Optional: Supabase (for cloud DB)
-supabase==2.1.0
-postgrest-py==0.10.0
-
-# Optional: Logging & monitoring
-python-json-logger==2.0.7
-
-# Development (NOT required in production)
-# pytest==7.4.0
-# pytest-asyncio==0.21.0
-# black==23.9.0
-# flake8==6.1.0
