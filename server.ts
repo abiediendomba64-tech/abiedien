@@ -5,6 +5,7 @@ import dns from "dns";
 import { promises as dnsPromises } from "dns";
 import { createServer as createViteServer } from "vite";
 import dotenv from "dotenv";
+import { dbUpsertUser } from "./src/lib/db";
 
 dotenv.config();
 
@@ -23,11 +24,12 @@ const SUPER_ADMIN_IDS = (process.env.SUPER_ADMIN_IDS || "123456789,987654321")
 const VERIFICATION_EXPIRY_DAYS = parseInt(process.env.VERIFICATION_EXPIRY_DAYS || "30", 10);
 
 const ROLE_HIERARCHY: Record<string, number> = {
-  new_user: 1,
-  member: 2,
-  admin: 3,
-  dev: 4,
-  super_admin: 5,
+  new_user: 0,
+  member: 1,
+  admin: 2,
+  dev: 3,
+  super_admin: 4,
+  root: 5,
 };
 
 function getRoleLevel(role: string): number {
@@ -652,31 +654,63 @@ function generateTopicId(): string {
 
 // Bot UI Helpers
 function buildMainMenuMarkup(userRole: string) {
-  const buttons = [
-    [{ text: "✅ Verifikasi", callback_data: "menu_verify" }, { text: "🎫 Tiket", callback_data: "menu_ticket" }],
-    [{ text: "💬 Forum", callback_data: "menu_forum" }, { text: "💳 Payment", callback_data: "menu_payment" }],
-    [{ text: "📋 Status", callback_data: "menu_status" }, { text: "❓ Bantuan", callback_data: "menu_help" }]
-  ];
-  if (hasAccess(userRole, 'admin')) {
-    buttons.push([{ text: "🔧 Admin Ops", callback_data: "menu_admin" }]);
+  const roleLevel = getRoleLevel(userRole);
+  const buttons = [];
+
+  if (roleLevel === 0) {
+    // Tier 0: New User / Onboarding
+    buttons.push(
+      [{ text: "📋 Status Pendaftaran", callback_data: "menu_status" }, { text: "❓ Bantuan", callback_data: "menu_help" }]
+    );
+  } else {
+    // Tier 1+: Member & Above
+    buttons.push(
+      [{ text: "✅ Verifikasi Domain", callback_data: "menu_verify" }, { text: "🎫 Tiket Saya", callback_data: "menu_ticket" }]
+    );
+    buttons.push(
+      [{ text: "💬 Forum Komunitas", callback_data: "menu_forum" }, { text: "💳 Payment Proof", callback_data: "menu_payment" }]
+    );
+    buttons.push(
+      [{ text: "📋 Status Akun", callback_data: "menu_status" }, { text: "❓ Bantuan", callback_data: "menu_help" }]
+    );
   }
+
+  if (hasAccess(userRole, 'admin')) {
+    buttons.push([{ text: "🔧 Admin Operasional (Tier 2)", callback_data: "menu_admin" }]);
+  }
+  if (hasAccess(userRole, 'dev')) {
+    buttons.push([{ text: "🛠️ Dev & Tech Tools (Tier 3)", callback_data: "menu_dev" }]);
+  }
+  if (hasAccess(userRole, 'super_admin')) {
+    buttons.push([{ text: "👑 Super Admin Authority (Tier 4)", callback_data: "menu_super" }]);
+  }
+  if (hasAccess(userRole, 'root')) {
+    buttons.push([{ text: "🛡️ Root Emergency & Recovery (Tier 5)", callback_data: "menu_root" }]);
+  }
+
   return { inline_keyboard: buttons };
 }
 
-function buildAdminPanelMarkup() {
-  return {
-    inline_keyboard: [
-      [{ text: "📋 List Member", callback_data: "admin_list" }, { text: "💳 Pending Pay", callback_data: "admin_pay" }],
-      [{ text: "🌐 Cek Domain", callback_data: "admin_domain" }, { text: "🔙 Kembali", callback_data: "menu_back" }]
-    ]
-  };
+function buildAdminPanelMarkup(userRole: string) {
+  const kb = [
+    [{ text: "📋 List & Review Member", callback_data: "admin_list" }, { text: "💳 Pending Payment", callback_data: "admin_pay" }],
+    [{ text: "🌐 Cek Domain TXT", callback_data: "admin_domain" }, { text: "📊 Kelola Tiket Pending", callback_data: "ticket_manage" }]
+  ];
+  if (hasAccess(userRole, 'dev')) {
+    kb.push([{ text: "🛠️ Panel Dev / DNS (Tier 3)", callback_data: "menu_dev" }]);
+  }
+  if (hasAccess(userRole, 'super_admin')) {
+    kb.push([{ text: "👑 Panel Super Admin (Tier 4)", callback_data: "menu_super" }]);
+  }
+  kb.push([{ text: "🏠 Menu Utama", callback_data: "menu_back" }]);
+  return { inline_keyboard: kb };
 }
 
 function buildTicketMenuMarkup(userRole: string) {
   const buttons = [
     [{ text: "📝 Buat Tiket", callback_data: "ticket_new" }, { text: "📜 Tiket Saya", callback_data: "ticket_my" }]
   ];
-  if (hasAccess(userRole, 'member')) {
+  if (hasAccess(userRole, 'admin')) {
     buttons.push([{ text: "📊 Kelola Pending", callback_data: "ticket_manage" }]);
   }
   buttons.push([{ text: "🔙 Kembali", callback_data: "menu_back" }]);
@@ -685,6 +719,7 @@ function buildTicketMenuMarkup(userRole: string) {
 
 function buildForumMenuMarkup(userRole: string) {
   const buttons = [
+    [{ text: "💬 Join Grup Telegram Forum", url: "https://t.me/+ybOzZ_lstEdhNDU1" }],
     [{ text: "📚 Lihat Topik", callback_data: "forum_list_open_0" }, { text: "📝 Buat Topik", callback_data: "forum_create" }]
   ];
   if (hasAccess(userRole, 'admin')) {
@@ -723,15 +758,10 @@ async function handleBotMessage(userId: number, username: string, messageText: s
   const text = (messageText || "").trim();
   const role = getUserRole(userId);
   const user = getUser(userId);
-
-  // Rate limit check: 1 second
   const now = Date.now();
-  if (session.lastActionTime && now - session.lastActionTime < 800) {
-    return {
-      replies: [{ text: "⏳ Slow down! Tunggu sejenak sebelum mengirim pesan." }]
-    };
-  }
-  session.lastActionTime = now;
+
+  // Rate limit removed for instant responsiveness on /start and bot interactions
+  session.lastActionTime = Date.now();
 
   // Handle Commands
   if (text.startsWith("/")) {
@@ -815,13 +845,86 @@ async function handleBotMessage(userId: number, username: string, messageText: s
       };
     }
 
-    if (cmd === "/start_ulang" || cmd === "/register_ulang") {
+    if (cmd === "/start_ulang" || cmd === "/register_ulang" || cmd === "/register") {
       session.step = "waiting_name";
       session.data = {};
       return {
         replies: [
           {
-            text: `📝 **Pendaftaran Ulang Member**\n\nSilakan masukkan **Nama Lengkap** Anda:`,
+            text: `📝 **Pendaftaran & Registrasi Member**\n\nSilakan masukkan **Nama Lengkap** Anda:`,
+            isMarkdown: true
+          }
+        ]
+      };
+    }
+
+    if (cmd === "/menu" && args[0]?.toLowerCase() === "tips") {
+      return {
+        replies: [
+          {
+            text: `💡 **Tips & Panduan Operasional Bot**\n\n1. **Verifikasi WhatsApp**: Pastikan nomor HP aktif dan menggunakan format benar (9-15 digit).\n2. **Setup Domain**: Gunakan DNS TTL 300 untuk propagasi cepat di 1.1.1.1 & 8.8.8.8.\n3. **Status Akun**: Gunakan perintah \`/status\` untuk mengecek apakah akun Anda sudah disetujui (VERIFIED) oleh Admin.\n4. **Grup Forum**: Bergabunglah ke diskusi resmi di https://t.me/+ybOzZ_lstEdhNDU1`,
+            replyMarkup: buildMainMenuMarkup(role),
+            isMarkdown: true
+          }
+        ]
+      };
+    }
+
+    if (cmd === "/status") {
+      if (!user) {
+        return {
+          replies: [
+            {
+              text: `⚠️ **Belum Terdaftar (Tier 0)**\n\nAnda belum melakukan pendaftaran akun. Ketik **/register** atau **/start** untuk memulai form registrasi.`,
+              isMarkdown: true
+            }
+          ]
+        };
+      }
+      const timeAgo = Math.max(1, Math.round((Date.now() - new Date(user.created_at).getTime()) / 60000));
+      return {
+        replies: [
+          {
+            text: `📋 **Status Akun & Pendaftaran Anda:**\n\n👤 Nama: **${user.full_name}**\n🆔 Telegram ID: \`${user.telegram_id}\` (@${user.telegram_username})\n📱 WhatsApp: \`${user.whatsapp_number}\` (✅ Terverifikasi)\n🌐 Domain: \`${user.domain_name || 'Belum diset'}\`\n🛡️ Role / Tier: **${user.role.toUpperCase()}**\n⏳ Status Onboarding: **${user.onboarding_status}**\n🕒 Terdaftar: ${timeAgo} menit lalu`,
+            replyMarkup: buildMainMenuMarkup(user.role),
+            isMarkdown: true
+          }
+        ]
+      };
+    }
+
+    if (cmd === "/login") {
+      if (!user) {
+        return {
+          replies: [
+            {
+              text: `🔐 **Login / Akses Persona**\n\nAkun dengan Telegram ID \`${userId}\` belum terdaftar di database Admin DB Act. Silakan ketik **/register** untuk melakukan pendaftaran member baru.`,
+              isMarkdown: true
+            }
+          ]
+        };
+      }
+      return {
+        replies: [
+          {
+            text: `✅ **Login Berhasil**\n\nSelamat datang kembali, **${user.full_name}**!\nRole Anda terdeteksi sebagai **${user.role.toUpperCase()}** (${user.onboarding_status}).\n\nGunakan menu di bawah untuk mulai beroperasi:`,
+            replyMarkup: buildMainMenuMarkup(user.role),
+            isMarkdown: true
+          }
+        ]
+      };
+    }
+
+    if (cmd === "/lupa" || cmd === "/lupa_pass" || cmd === "/lupapass") {
+      return {
+        replies: [
+          {
+            text: `🔑 **Pemulihan Akun & ID (Lupa Pass / Token)**\n\nIdentitas Telegram Anda:\n• Telegram ID: \`${userId}\`\n• Username: \`@${username || 'N/A'}\`\n\nJika Anda lupa data atau token verifikasi, silakan buat tiket dukungan atau hubungi Admin Operasional (Tier 2+) dengan menyebutkan Telegram ID Anda agar sistem dapat mereset akses.`,
+            replyMarkup: {
+              inline_keyboard: [
+                [{ text: "🎫 Buat Tiket Bantuan", callback_data: "menu_ticket" }, { text: "🔄 Cek Status", callback_data: "menu_status" }]
+              ]
+            },
             isMarkdown: true
           }
         ]
@@ -1361,7 +1464,67 @@ async function handleBotMessage(userId: number, username: string, messageText: s
     }
   }
 
-  // Handle Multi-step form states
+  // Handle Multi-step form states or direct NLU form submission
+  if (text.toUpperCase().includes("PENDAFTARAN") || (text.toLowerCase().includes("nama lengkap:") && text.toLowerCase().includes("alasan"))) {
+    const lines = text.split("\n");
+    let parsedName = "";
+    let parsedWa = "081234567890";
+    let parsedReason = "Pendaftaran via Form NLU";
+    for (const l of lines) {
+      const lower = l.toLowerCase();
+      if (lower.includes("nama") && l.includes(":")) {
+        parsedName = l.split(":")[1]?.trim() || "";
+      } else if ((lower.includes("hp") || lower.includes("whatsapp") || lower.includes("wa")) && l.includes(":")) {
+        parsedWa = l.split(":")[1]?.trim().replace(/[\s\-\+]/g, "") || parsedWa;
+      } else if (lower.includes("alasan") && l.includes(":")) {
+        parsedReason = l.split(":")[1]?.trim() || parsedReason;
+      }
+    }
+    if (parsedName) {
+      const token = generateToken(16);
+      const expiry = Math.floor(Date.now() / 1000) + VERIFICATION_EXPIRY_DAYS * 86400;
+      usersStore.set(userId, {
+        id: nextUserId++,
+        telegram_id: userId,
+        telegram_username: username || `user_${userId}`,
+        full_name: parsedName,
+        whatsapp_number: parsedWa,
+        domain_name: "",
+        verification_token: token,
+        token_expiry: expiry,
+        tg_handle: username || null,
+        role: 'new_user',
+        is_verified: false,
+        domain_verified: false,
+        onboarding_status: 'PENDING_REVIEW',
+        join_reason: parsedReason,
+        phone_verified: true,
+        phone_verified_at: new Date().toISOString(),
+        risk_score: 'LOW',
+        risk_flags: ["FORM_SUBMIT"],
+        approved_by: null,
+        approved_at: null,
+        last_activity_at: new Date().toISOString(),
+        last_verified_at: null,
+        created_at: new Date().toISOString()
+      });
+
+      return {
+        replies: [
+          {
+            text: `🎉 **Formulir Pendaftaran Berhasil Diproses (NLU / Admin DB Act)!**\n\n👤 Nama: **${parsedName}**\n📱 WhatsApp: \`${parsedWa}\` (✅ Terverifikasi)\n🆔 Telegram ID: \`${userId}\`\n📝 Alasan: _"${parsedReason}"_\n⏳ Status: **PENDING REVIEW** (Menunggu validasi Admin Operasional Tier 2+)\n\nData Anda telah tercatat di database admin. Ketik \`/status\` untuk memantau persetujuan akun.`,
+            replyMarkup: {
+              inline_keyboard: [
+                [{ text: "🔄 Cek Status Akun", callback_data: "menu_status" }]
+              ]
+            },
+            isMarkdown: true
+          }
+        ]
+      };
+    }
+  }
+
   if (session.step === "waiting_name") {
     if (text.length < 2) {
       return { replies: [{ text: "❌ Nama terlalu pendek (minimal 2 karakter). Silakan masukkan kembali:" }] };
@@ -1445,6 +1608,24 @@ async function handleBotMessage(userId: number, username: string, messageText: s
         last_verified_at: null,
         created_at: new Date().toISOString()
       });
+    }
+
+    // Sync to Supabase users table with PENDING_REVIEW status
+    const targetUserRecord = usersStore.get(userId);
+    if (targetUserRecord) {
+      dbUpsertUser({
+        telegram_id: targetUserRecord.telegram_id,
+        telegram_username: targetUserRecord.telegram_username,
+        full_name: targetUserRecord.full_name,
+        whatsapp_number: targetUserRecord.whatsapp_number,
+        domain_name: targetUserRecord.domain_name,
+        role: targetUserRecord.role,
+        is_verified: targetUserRecord.is_verified,
+        domain_verified: targetUserRecord.domain_verified,
+        onboarding_status: 'PENDING_REVIEW',
+        join_reason: targetUserRecord.join_reason,
+        risk_status: targetUserRecord.risk_score
+      }).catch(err => console.warn("Supabase registration sync warning:", err));
     }
 
     auditLogsStore.push({
@@ -2088,7 +2269,7 @@ async function handleBotCallback(userId: number, callbackData: string): Promise<
     return {
       replies: [
         {
-          text: "💬 **Forum Diskusi Komunitas**\nBerdiskusi seputar domain, hosting, SEO, dan optimasi:",
+          text: "💬 **Forum Diskusi Komunitas**\nBerdiskusi seputar domain, hosting, SEO, dan optimasi.\n\n🌐 **Grup Resmi:** https://t.me/+ybOzZ_lstEdhNDU1",
           replyMarkup: buildForumMenuMarkup(role),
           isMarkdown: true
         }
@@ -2166,13 +2347,72 @@ async function handleBotCallback(userId: number, callbackData: string): Promise<
 
   if (callbackData === "menu_admin") {
     if (!hasAccess(role, 'admin')) {
-      return { replies: [{ text: "⛔ Akses ditolak! Minimum role: Admin" }] };
+      return { replies: [{ text: "⛔ Akses ditolak! Minimum role: Admin Operasional (Tier 2)" }] };
     }
     return {
       replies: [
         {
-          text: "🔧 **Panel Operasional Admin**\nPilih menu administrasi:",
-          replyMarkup: buildAdminPanelMarkup(),
+          text: "🔧 **Panel Operasional Admin (Tier 2)**\nPilih menu manajemen operasional:",
+          replyMarkup: buildAdminPanelMarkup(role),
+          isMarkdown: true
+        }
+      ]
+    };
+  }
+
+  if (callbackData === "menu_dev") {
+    if (!hasAccess(role, 'dev')) {
+      return { replies: [{ text: "⛔ Akses ditolak! Memerlukan role Dev / Technical (Tier 3)" }] };
+    }
+    return {
+      replies: [
+        {
+          text: "🛠️ **Panel Developer & Technical (Tier 3)**\n• Inspeksi DNS & WHOIS Resolving (1.1.1.1 / 8.8.8.8)\n• Debugging Infrastruktur & Log Sistem\n• Escalation handling ke Super Admin",
+          replyMarkup: {
+            inline_keyboard: [
+              [{ text: "🌐 Cek Domain Resolver", callback_data: "admin_domain" }, { text: "📋 List Member", callback_data: "admin_list" }],
+              [{ text: "🏠 Menu Utama", callback_data: "menu_back" }]
+            ]
+          },
+          isMarkdown: true
+        }
+      ]
+    };
+  }
+
+  if (callbackData === "menu_super") {
+    if (!hasAccess(role, 'super_admin')) {
+      return { replies: [{ text: "⛔ Akses ditolak! Memerlukan role Super Admin (Tier 4)" }] };
+    }
+    return {
+      replies: [
+        {
+          text: "👑 **Panel Super Admin (Tier 4)**\n• High-Risk Security & Financial Review\n• Authority Escalation & Final Decision\n• Modifikasi Role Pengguna & Verifikasi Pembayaran Master",
+          replyMarkup: {
+            inline_keyboard: [
+              [{ text: "💳 Pending Payment Review", callback_data: "admin_pay" }, { text: "👥 List Member", callback_data: "admin_list" }],
+              [{ text: "🏠 Menu Utama", callback_data: "menu_back" }]
+            ]
+          },
+          isMarkdown: true
+        }
+      ]
+    };
+  }
+
+  if (callbackData === "menu_root") {
+    if (!hasAccess(role, 'root')) {
+      return { replies: [{ text: "⛔ Akses ditolak! Memerlukan role Root / System Owner (Tier 5)" }] };
+    }
+    return {
+      replies: [
+        {
+          text: "🛡️ **Panel Root / System Owner (Tier 5)**\n• Emergency System Recovery\n• Database & Infrastructure Restoration\n• Authority Reset & Full System Override",
+          replyMarkup: {
+            inline_keyboard: [
+              [{ text: "📊 Audit Trail & System Logs", callback_data: "admin_list" }, { text: "🏠 Menu Utama", callback_data: "menu_back" }]
+            ]
+          },
           isMarkdown: true
         }
       ]
@@ -2520,8 +2760,8 @@ async function handleBotCallback(userId: number, callbackData: string): Promise<
   }
 
   if (callbackData === "ticket_manage") {
-    if (!hasAccess(role, 'member')) {
-      return { replies: [{ text: "⛔ Akses ditolak! Minimum role: Member" }] };
+    if (!hasAccess(role, 'admin')) {
+      return { replies: [{ text: "⛔ Akses ditolak. Pengelolaan tiket memerlukan role Admin Operasional (Tier 2) atau di atasnya." }] };
     }
     const pendingTickets = Array.from(ticketsStore.values()).filter(t => t.status === 'pending');
     if (pendingTickets.length === 0) {
@@ -2548,6 +2788,9 @@ async function handleBotCallback(userId: number, callbackData: string): Promise<
   }
 
   if (callbackData.startsWith("ticket_detail_")) {
+    if (!hasAccess(role, 'admin')) {
+      return { replies: [{ text: "⛔ Akses ditolak. Memerlukan role Admin Operasional (Tier 2) atau di atasnya." }] };
+    }
     const tid = parseInt(callbackData.split("_")[2], 10);
     const t = ticketsStore.get(tid);
     if (!t) return { replies: [{ text: "❌ Tiket tidak ditemukan." }] };
@@ -2572,6 +2815,9 @@ async function handleBotCallback(userId: number, callbackData: string): Promise<
   }
 
   if (callbackData.startsWith("ticket_assign_")) {
+    if (!hasAccess(role, 'admin')) {
+      return { replies: [{ text: "⛔ Akses ditolak. Memerlukan role Admin Operasional (Tier 2) atau di atasnya." }] };
+    }
     const tid = parseInt(callbackData.split("_")[2], 10);
     const t = ticketsStore.get(tid);
     if (t) {
@@ -2591,6 +2837,9 @@ async function handleBotCallback(userId: number, callbackData: string): Promise<
   }
 
   if (callbackData.startsWith("ticket_resolve_")) {
+    if (!hasAccess(role, 'admin')) {
+      return { replies: [{ text: "⛔ Akses ditolak. Memerlukan role Admin Operasional (Tier 2) atau di atasnya." }] };
+    }
     const tid = parseInt(callbackData.split("_")[2], 10);
     const t = ticketsStore.get(tid);
     if (t) {

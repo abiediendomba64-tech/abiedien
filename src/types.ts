@@ -1,4 +1,4 @@
-export type UserRole = 'super_admin' | 'dev' | 'admin' | 'member' | 'new_user';
+export type UserRole = 'root' | 'super_admin' | 'dev' | 'admin' | 'member' | 'new_user';
 
 export type OnboardingStatus = 'PENDING_REVIEW' | 'VERIFIED' | 'REJECTED' | 'SUSPENDED' | 'BLOCKED';
 

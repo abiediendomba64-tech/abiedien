@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { User, Ticket, Payment, DashboardStats } from '../../types';
+import { dbGetUsers } from '../../lib/db';
+import { RoleGuard, assertActionPermission } from '../../lib/authGuard';
 import {
   Ticket as TicketIcon,
   Users,
@@ -20,7 +22,8 @@ import {
   HelpCircle,
   Eye,
   Filter,
-  UserCheck
+  UserCheck,
+  Download
 } from 'lucide-react';
 
 interface AdminWorkspaceProps {
@@ -45,6 +48,51 @@ export const AdminWorkspace: React.FC<AdminWorkspaceProps> = ({
   const [actionNote, setActionNote] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [downloadingCsv, setDownloadingCsv] = useState(false);
+
+  const handleDownloadCsv = async () => {
+    setDownloadingCsv(true);
+    try {
+      let dataToExport = users;
+      try {
+        const freshUsers = await dbGetUsers();
+        if (freshUsers && freshUsers.length > 0) {
+          dataToExport = freshUsers;
+        }
+      } catch (err) {
+        console.warn("Failed to fetch fresh users from DB, using current props:", err);
+      }
+
+      const headers = ['ID', 'Telegram ID', 'Telegram Username', 'Full Name', 'WhatsApp', 'Domain', 'Role', 'Status', 'Domain Verified', 'Created At'];
+      const rows = dataToExport.map(u => [
+        u.id,
+        u.telegram_id,
+        `@${u.telegram_username || ''}`,
+        `"${(u.full_name || '').replace(/"/g, '""')}"`,
+        `"${(u.whatsapp_number || '').replace(/"/g, '""')}"`,
+        `"${(u.domain_name || '').replace(/"/g, '""')}"`,
+        u.role,
+        u.onboarding_status || 'VERIFIED',
+        u.domain_verified ? 'YES' : 'NO',
+        u.created_at ? new Date(u.created_at).toISOString() : ''
+      ]);
+
+      const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `telegram_bot_users_${new Date().toISOString().slice(0, 10)}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (e) {
+      console.error('Error downloading CSV:', e);
+    } finally {
+      setDownloadingCsv(false);
+    }
+  };
 
   const pendingMembers = users.filter((u) => u.onboarding_status === 'PENDING_REVIEW');
   const pendingTickets = tickets.filter((t) => t.status === 'pending');
@@ -72,6 +120,7 @@ export const AdminWorkspace: React.FC<AdminWorkspaceProps> = ({
   ) => {
     setActionLoading(true);
     try {
+      assertActionPermission(currentUser.role, 'admin', `ticket_${action}`);
       let endpoint = '';
       let body: any = { adminId: currentUser.telegram_id, note: actionNote };
 
@@ -104,13 +153,16 @@ export const AdminWorkspace: React.FC<AdminWorkspaceProps> = ({
 
       if (res.ok) {
         setActionSuccess(`Aksi [${action.toUpperCase()}] berhasil dieksekusi.`);
+        setActionError(null);
         setActionNote('');
         setSelectedTicket(null);
         if (onRefreshData) onRefreshData();
         setTimeout(() => setActionSuccess(null), 4000);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      setActionError(err.message || 'Terjadi kesalahan eksekusi aksi.');
+      setTimeout(() => setActionError(null), 5000);
     } finally {
       setActionLoading(false);
     }
@@ -256,6 +308,13 @@ export const AdminWorkspace: React.FC<AdminWorkspaceProps> = ({
         <div className="p-3.5 rounded-xl bg-emerald-950/80 border border-emerald-500/40 text-emerald-200 text-xs font-semibold flex items-center gap-2">
           <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
           {actionSuccess}
+        </div>
+      )}
+
+      {actionError && (
+        <div className="p-3.5 rounded-xl bg-rose-950/90 border border-rose-500/50 text-rose-200 text-xs font-semibold flex items-center gap-2 shadow-lg">
+          <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+          {actionError}
         </div>
       )}
 
@@ -576,7 +635,7 @@ export const AdminWorkspace: React.FC<AdminWorkspaceProps> = ({
       {/* Tab 3: Members Directory with Privacy Masking */}
       {activeAdminTab === 'members_list' && (
         <div className="space-y-4">
-          <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-between">
+          <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
             <div>
               <h3 className="text-sm font-bold text-slate-200 flex items-center gap-2">
                 <Users className="w-4 h-4 text-sky-400" />
@@ -586,9 +645,19 @@ export const AdminWorkspace: React.FC<AdminWorkspaceProps> = ({
                 Sesuai prinsip kepatuhan data privacy, identitas Telegram ID dan WhatsApp disensor secara otomatis di level Admin.
               </p>
             </div>
-            <span className="text-xs font-mono text-slate-400 bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800">
-              Total: {users.length} Akun
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-mono text-slate-400 bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800">
+                Total: {users.length} Akun
+              </span>
+              <button
+                onClick={handleDownloadCsv}
+                disabled={downloadingCsv}
+                className="px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-semibold text-xs flex items-center gap-1.5 transition shadow disabled:opacity-50"
+              >
+                <Download className="w-3.5 h-3.5" />
+                {downloadingCsv ? 'Downloading...' : 'Download CSV'}
+              </button>
+            </div>
           </div>
 
           <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">

@@ -99,45 +99,53 @@ export const DashboardOverview: React.FC<StatsProps> = ({ stats, onNavigateTab }
     string,
     { title: string; level: number; color: string; domainScope: string; botPermissions: string[]; dashboardScope: string }
   > = {
-    super_admin: {
-      title: 'Super Admin (Level 5)',
+    root: {
+      title: 'Root / System Owner (Tier 5)',
       level: 5,
-      color: 'text-amber-400 border-amber-500/40 bg-amber-500/10',
-      domainScope: 'Semua domain (Bypass, Force-verify, Delete, Assign Owner, Eksekusi Monthly Check)',
-      botPermissions: ['/setrole', '/verify_pay', '/broadcast', '/cekdomain', '/list_members', 'Kelola Tiket', 'Moderasi Forum'],
-      dashboardScope: 'Akses penuh tanpa batas, modifikasi role seluruh pengguna, verifikasi bukti transfer, audit trail lengkap.',
+      color: 'text-rose-400 border-rose-500/40 bg-rose-500/10',
+      domainScope: 'Emergency control, disaster recovery, database & infrastructure restoration.',
+      botPermissions: ['Emergency Shutdown', 'DB Migration', 'Authority Reset', 'System Recovery'],
+      dashboardScope: 'Hidden / emergency only; disaster recovery console and master system controls.',
     },
-    admin: {
-      title: 'Admin Operasional (Level 3)',
-      level: 3,
-      color: 'text-sky-400 border-sky-500/40 bg-sky-500/10',
-      domainScope: 'Lihat list seluruh domain member & status verifikasi TXT',
-      botPermissions: ['/broadcast (konfirmasi)', '/list_members', 'Assign & Resolve Tiket', 'Kunci/Hapus Topik Forum'],
-      dashboardScope: 'Kelola antrean tiket, respon komentar forum, broadcast ke semua member (tidak bisa setrole super_admin).',
+    super_admin: {
+      title: 'Super Admin (Tier 4)',
+      level: 4,
+      color: 'text-amber-400 border-amber-500/40 bg-amber-500/10',
+      domainScope: 'High-risk security, financial risk, authority escalation, final high-risk decisions.',
+      botPermissions: ['/setrole', '/verify_pay', '/broadcast', 'High-Risk Review', 'Account Freeze'],
+      dashboardScope: 'Authority for high-risk decisions exceeding operational limits, security auditing.',
     },
     dev: {
-      title: 'Developer / Technical (Level 4)',
-      level: 4,
+      title: 'Developer / Technical (Tier 3)',
+      level: 3,
       color: 'text-purple-400 border-purple-500/40 bg-purple-500/10',
-      domainScope: 'Inspeksi teknis domain (WHOIS, DNS TXT Resolving, Nawala Check, Google Indexing API)',
-      botPermissions: ['/cekdomain [domain.com]', 'Akses Forum Developer', 'Cek Status DNS Resolver 1.1.1.1'],
-      dashboardScope: 'Domain tools & WHOIS inspector, diagnosa delay propagasi DNS TTL 300, simulasi endpoint.',
+      domainScope: 'Technical / security investigation, DNS / WHOIS inspection, infrastructure debugging.',
+      botPermissions: ['/cekdomain', 'Technical Escalation Queue', 'DNS/WHOIS Tools'],
+      dashboardScope: 'Domain tools & WHOIS inspector, technical diagnostics, escalation handling.',
+    },
+    admin: {
+      title: 'Admin Operasional (Tier 2)',
+      level: 2,
+      color: 'text-sky-400 border-sky-500/40 bg-sky-500/10',
+      domainScope: 'Operational center, member request evaluation, domain & ticket queue management.',
+      botPermissions: ['Assign Ticket', 'Ask Info', 'Approve / Reject', 'Resolve / Escalate'],
+      dashboardScope: 'Operational workflow, ticket queues, handling member requests and follow-ups.',
     },
     member: {
-      title: 'Member Terverifikasi (Level 2)',
-      level: 2,
+      title: 'Member / Requester (Tier 1)',
+      level: 1,
       color: 'text-emerald-400 border-emerald-500/40 bg-emerald-500/10',
-      domainScope: 'Domain pribadi yang telah valid TXT record di DNS',
-      botPermissions: ['Buka & Balas Topik Forum', 'Buat Tiket Dukungan Teknis', 'Cek Status Akun Pribadi', 'Upload Pembayaran'],
-      dashboardScope: 'Akses forum komunitas, pantau tiket pribadi, tracking keaktifan domain & indexing.',
+      domainScope: 'Personal domain requests, support tickets, follow-ups, payment proof upload, community forum.',
+      botPermissions: ['Buat Tiket', 'Upload Payment Proof', 'Forum Komunitas', 'Status Cek'],
+      dashboardScope: 'Requester dashboard, track personal tickets and domain verification status.',
     },
     new_user: {
-      title: 'New User / Unverified (Level 1)',
-      level: 1,
+      title: 'New User / Calon (Tier 0)',
+      level: 0,
       color: 'text-slate-400 border-slate-700 bg-slate-800/40',
-      domainScope: 'Hanya bisa mendaftarkan 1 nama domain untuk mendapatkan token TXT (belum diverifikasi)',
-      botPermissions: ['/start pendaftaran', 'Klaim token DNS TXT', 'Simulasi Pembayaran Transfer', 'Panduan /help'],
-      dashboardScope: 'Dibatasi: Tidak dapat membuat topik forum atau tiket lanjutan sebelum domain terverifikasi.',
+      domainScope: 'Onboarding registration, identity, phone verification, join reason, pending status check.',
+      botPermissions: ['/start pendaftaran', 'Input Nama & No. WhatsApp', 'Alasan Bergabung', 'Tunggu Approval Admin'],
+      dashboardScope: 'Restricted onboarding view awaiting admin approval; no operational request access.',
     },
   };
 
@@ -272,20 +280,28 @@ export const DashboardOverview: React.FC<StatsProps> = ({ stats, onNavigateTab }
           </p>
           <div className="space-y-1.5 text-xs">
             <div className="flex items-center justify-between p-2 rounded bg-slate-800/60 border border-slate-700/40">
-              <span className="font-mono text-amber-300">5. super_admin</span>
-              <span className="text-slate-400">Setrole, Verify Pay, Master</span>
+              <span className="font-mono text-rose-300">Tier 5. root</span>
+              <span className="text-slate-400">Emergency & System Recovery</span>
             </div>
             <div className="flex items-center justify-between p-2 rounded bg-slate-800/60 border border-slate-700/40">
-              <span className="font-mono text-purple-300">4. dev</span>
-              <span className="text-slate-400">DNS Whois, Indexing, Tech</span>
+              <span className="font-mono text-amber-300">Tier 4. super_admin</span>
+              <span className="text-slate-400">High-Risk & Security Authority</span>
             </div>
             <div className="flex items-center justify-between p-2 rounded bg-slate-800/60 border border-slate-700/40">
-              <span className="font-mono text-sky-300">3. admin</span>
-              <span className="text-slate-400">Broadcast, List, Ticket Ops</span>
+              <span className="font-mono text-purple-300">Tier 3. dev</span>
+              <span className="text-slate-400">Technical / DNS / Infrastructure</span>
             </div>
             <div className="flex items-center justify-between p-2 rounded bg-slate-800/60 border border-slate-700/40">
-              <span className="font-mono text-emerald-300">2. member</span>
-              <span className="text-slate-400">Forum, Tiket, Verif Domain</span>
+              <span className="font-mono text-sky-300">Tier 2. admin</span>
+              <span className="text-slate-400">Operational & Ticket Decisions</span>
+            </div>
+            <div className="flex items-center justify-between p-2 rounded bg-slate-800/60 border border-slate-700/40">
+              <span className="font-mono text-emerald-300">Tier 1. member</span>
+              <span className="text-slate-400">Requester, Tickets & Forum</span>
+            </div>
+            <div className="flex items-center justify-between p-2 rounded bg-slate-800/60 border border-slate-700/40">
+              <span className="font-mono text-slate-300">Tier 0. new_user</span>
+              <span className="text-slate-400">Onboarding & Pending Review</span>
             </div>
           </div>
         </div>

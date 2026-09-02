@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { User, Ticket, ForumTopic, Payment } from '../../types';
+import { classifyTicketOrMessage, getPriorityMeta, getRouteMeta } from '../../lib/riskEngine';
 import {
   Ticket as TicketIcon,
   PlusCircle,
@@ -16,7 +17,8 @@ import {
   Search,
   ExternalLink,
   ChevronRight,
-  Sparkles
+  Sparkles,
+  Bot
 } from 'lucide-react';
 
 interface MemberWorkspaceProps {
@@ -52,7 +54,12 @@ export const MemberWorkspace: React.FC<MemberWorkspaceProps> = ({ currentUser, u
   // New ticket form state
   const [category, setCategory] = useState('🌐 Domain');
   const [ticketMessage, setTicketMessage] = useState('');
-  const [priority, setPriority] = useState<'low' | 'medium' | 'high'>('medium');
+  const classification = classifyTicketOrMessage(ticketMessage, category);
+  const autoPriority = classification.priority;
+  const autoRoute = classification.route_target;
+  const priorityMeta = getPriorityMeta(autoPriority);
+  const routeMeta = getRouteMeta(autoRoute);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showDraftConfirm, setShowDraftConfirm] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
@@ -83,7 +90,7 @@ export const MemberWorkspace: React.FC<MemberWorkspaceProps> = ({ currentUser, u
           userName: user.full_name,
           category,
           message: ticketMessage,
-          priority
+          priority: autoPriority
         })
       });
       if (res.ok) {
@@ -338,9 +345,23 @@ export const MemberWorkspace: React.FC<MemberWorkspaceProps> = ({ currentUser, u
                   <span className="text-slate-400">Kategori:</span>
                   <span className="font-semibold text-slate-200">{category}</span>
                 </div>
-                <div className="flex justify-between py-1 border-b border-slate-800">
-                  <span className="text-slate-400">Prioritas:</span>
-                  <span className="font-semibold text-slate-200 uppercase">{priority}</span>
+                <div className="flex justify-between py-1 border-b border-slate-800 items-center">
+                  <span className="text-slate-400">Prioritas Otomatis (Risk Engine):</span>
+                  <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${priorityMeta.colorClass}`}>
+                    {priorityMeta.label}
+                  </span>
+                </div>
+                <div className="flex justify-between py-1 border-b border-slate-800 items-center">
+                  <span className="text-slate-400">Routing Target:</span>
+                  <span className={`px-2.5 py-0.5 rounded text-xs font-bold border ${routeMeta.badgeClass}`}>
+                    {routeMeta.label}
+                  </span>
+                </div>
+                <div className="p-3 rounded-lg bg-sky-950/40 border border-sky-500/20 text-[11px] text-sky-200 flex items-start gap-2">
+                  <Bot className="w-4 h-4 text-sky-400 shrink-0 mt-0.5" />
+                  <div>
+                    <strong className="text-white">Analisis Sistem:</strong> {classification.explanation}
+                  </div>
                 </div>
                 <div className="py-1">
                   <span className="text-slate-400 block mb-1">Rincian Permohonan:</span>
@@ -388,16 +409,16 @@ export const MemberWorkspace: React.FC<MemberWorkspaceProps> = ({ currentUser, u
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-slate-300">Tingkat Prioritas</label>
-                  <select
-                    value={priority}
-                    onChange={(e) => setPriority(e.target.value as any)}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-200 text-xs focus:outline-none focus:border-sky-500"
-                  >
-                    <option value="low">Rendah (Low)</option>
-                    <option value="medium">Normal (Medium)</option>
-                    <option value="high">Penting (High)</option>
-                  </select>
+                  <label className="text-xs font-semibold text-slate-300 flex items-center justify-between">
+                    <span>Tingkat Prioritas (Risk Engine)</span>
+                    <span className="text-[10px] text-sky-400 font-mono flex items-center gap-1">
+                      <Bot className="w-3 h-3" /> Auto-Synced
+                    </span>
+                  </label>
+                  <div className={`w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs flex items-center justify-between ${priorityMeta.colorClass}`}>
+                    <span className="font-bold">🤖 Otomatis — {priorityMeta.label}</span>
+                    <span className="text-[10px] text-slate-400 font-mono">Routing: {routeMeta.label.split(' ')[0]}</span>
+                  </div>
                 </div>
               </div>
 

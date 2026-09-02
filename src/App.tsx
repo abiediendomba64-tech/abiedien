@@ -121,6 +121,20 @@ export default function App() {
       domain_verified: true,
       onboarding_status: 'VERIFIED',
       created_at: new Date().toISOString()
+    },
+    root: {
+      id: 999,
+      telegram_id: 999888777,
+      telegram_username: 'system_root',
+      full_name: 'Root / System Owner',
+      whatsapp_number: '081100009999',
+      domain_name: 'root.system',
+      verification_token: 'tok_root_9999',
+      role: 'root',
+      is_verified: true,
+      domain_verified: true,
+      onboarding_status: 'VERIFIED',
+      created_at: new Date().toISOString()
     }
   };
 
@@ -232,20 +246,20 @@ export default function App() {
             </div>
 
             <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5">
-              {/* 1. New User */}
+              {/* Tier 0. New User */}
               <button
                 onClick={() => setSelectedRole('new_user')}
                 className={`px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1.5 transition text-xs shrink-0 ${
                   selectedRole === 'new_user'
-                    ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm'
+                    ? 'bg-slate-700/40 text-slate-200 border border-slate-600 shadow-sm'
                     : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
                 }`}
               >
                 <Users className="w-3 h-3" />
-                <span>👤 Calon Member (New User)</span>
+                <span>Tier 0: New User</span>
               </button>
 
-              {/* 2. Member */}
+              {/* Tier 1. Member */}
               <button
                 onClick={() => setSelectedRole('member')}
                 className={`px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1.5 transition text-xs shrink-0 ${
@@ -255,10 +269,10 @@ export default function App() {
                 }`}
               >
                 <ShieldCheck className="w-3 h-3" />
-                <span>🛡 Member Terverifikasi</span>
+                <span>Tier 1: Member</span>
               </button>
 
-              {/* 3. Admin */}
+              {/* Tier 2. Admin Ops */}
               <button
                 onClick={() => setSelectedRole('admin')}
                 className={`px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1.5 transition text-xs shrink-0 ${
@@ -268,33 +282,46 @@ export default function App() {
                 }`}
               >
                 <UserCheck className="w-3 h-3" />
-                <span>⚙️ Admin Operasional</span>
+                <span>Tier 2: Admin Ops</span>
               </button>
 
-              {/* 4. Dev */}
+              {/* Tier 3. Dev */}
               <button
                 onClick={() => setSelectedRole('dev')}
                 className={`px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1.5 transition text-xs shrink-0 ${
                   selectedRole === 'dev'
-                    ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 shadow-sm'
-                    : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
-                }`}
-              >
-                <Terminal className="w-3 h-3" />
-                <span>👨‍💻 Dev Tech (Tier 1)</span>
-              </button>
-
-              {/* 5. Super Admin */}
-              <button
-                onClick={() => setSelectedRole('super_admin')}
-                className={`px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1.5 transition text-xs shrink-0 ${
-                  selectedRole === 'super_admin'
                     ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40 shadow-sm'
                     : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
                 }`}
               >
+                <Terminal className="w-3 h-3" />
+                <span>Tier 3: Dev</span>
+              </button>
+
+              {/* Tier 4. Super Admin */}
+              <button
+                onClick={() => setSelectedRole('super_admin')}
+                className={`px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1.5 transition text-xs shrink-0 ${
+                  selectedRole === 'super_admin'
+                    ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm'
+                    : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
+                }`}
+              >
                 <Crown className="w-3 h-3" />
-                <span>👑 Super Admin (Tier 2)</span>
+                <span>Tier 4: Super Admin</span>
+              </button>
+
+              {/* Tier 5. Root */}
+              <button
+                onClick={() => setSelectedRole('root')}
+                className={`px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1.5 transition text-xs shrink-0 ${
+                  selectedRole === 'root'
+                    ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40 shadow-sm'
+                    : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
+                }`}
+              >
+                <Crown className="w-3 h-3 text-rose-400" />
+                <span>Tier 5: Root / Owner</span>
               </button>
             </div>
           </div>

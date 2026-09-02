@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { User, Ticket, Payment, AuditLog, DashboardStats, UserRole } from '../../types';
 import { SupabaseSqlConnector } from '../SupabaseSqlConnector';
+import { AuditHistory } from './AuditHistory';
 import {
   ShieldAlert,
   Crown,
@@ -475,58 +476,7 @@ export const SuperAdminWorkspace: React.FC<SuperAdminWorkspaceProps> = ({
 
       {/* Tab 4: Audit Trail (Unmasked) */}
       {activeSuperTab === 'audit_trail' && (
-        <div className="space-y-4">
-          <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-between">
-            <div>
-              <h3 className="text-sm font-bold text-slate-200 flex items-center gap-2">
-                <FileText className="w-4 h-4 text-sky-400" />
-                Immutable System Audit Trail (Full Unmasked Access)
-              </h3>
-              <p className="text-xs text-slate-400 mt-0.5">
-                Pencatatan setiap aksi admin, keputusan tiket, mutasi role, dan broadcast.
-              </p>
-            </div>
-            <button
-              onClick={fetchSuperData}
-              className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs flex items-center gap-1.5"
-            >
-              <RefreshCw className="w-3 h-3" /> Refresh Logs
-            </button>
-          </div>
-
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs font-mono">
-                <thead className="bg-slate-950 text-slate-400 uppercase text-[11px] tracking-wider border-b border-slate-800">
-                  <tr>
-                    <th className="px-5 py-3">Timestamp</th>
-                    <th className="px-4 py-3">Admin / Actor ID</th>
-                    <th className="px-4 py-3">Aksi Sistem</th>
-                    <th className="px-4 py-3">Target ID</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/60 text-slate-300">
-                  {auditLogs.map((log) => (
-                    <tr key={log.id} className="hover:bg-slate-800/40">
-                      <td className="px-5 py-3 text-slate-400 whitespace-nowrap">
-                        {new Date(log.timestamp).toLocaleString()}
-                      </td>
-                      <td className="px-4 py-3 font-semibold text-purple-300">
-                        Actor #{log.admin_id}
-                      </td>
-                      <td className="px-4 py-3 text-slate-100 font-bold">
-                        {log.action}
-                      </td>
-                      <td className="px-4 py-3 text-sky-400">
-                        {log.target_id}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
+        <AuditHistory initialLogs={auditLogs} />
       )}
 
       {/* Tab 5: Supabase SQL & Schema Engine */}
