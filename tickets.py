@@ -166,20 +166,7 @@ def ticket_callback(call):
         show_ticket_menu(cid, uid)
 
 
-def show_category_buttons(cid):
-    markup = types.InlineKeyboardMarkup(row_width=2)
-    cats = [
-        ("🌐 Domain", "cat_domain"), ("⚙️ Masalah", "cat_problem"), ("💳 Payment", "cat_payment"),
-        ("🔄 Push", "cat_push"), ("🚀 Migrasi", "cat_migration"), ("💰 Pendapatan", "cat_revenue"),
-        ("👥 Member", "cat_member"), ("🛒 Akuisisi", "cat_acquire"), ("🖥️ Kendala Web", "cat_webissue"),
-        ("📝 Claim", "cat_claim"), ("🔄 Web Update", "cat_webupdate")
-    ]
-    for label, data in cats:
-        markup.add(types.InlineKeyboardButton(label, callback_data=data))
-    markup.add(types.InlineKeyboardButton("🔙 Batal", callback_data="ticket_cancel"))
-    bot.send_message(cid, "📌 Pilih Kategori:", reply_markup=markup, parse_mode="Markdown")
-
-
+@bot.callback_query_handler(func=lambda call: call.data.startswith("cat_"))
 def category_callback(call):
     cat = call.data.split("_")[1]
     cid = call.message.chat.id
