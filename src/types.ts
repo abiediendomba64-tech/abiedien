@@ -148,3 +148,43 @@ export interface SupabaseQueryResult {
   querySql?: string;
   securityNotice?: string;
 }
+
+export interface Theme {
+  id: number;
+  name: string;
+  primary_color: string;
+  secondary_color: string;
+  accent_color: string;
+  bg_color: string;
+  text_color: string;
+  landing_template: string;
+  landing_title: string;
+  landing_subtitle: string;
+  landing_enabled: boolean;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PanelAccount {
+  id: number;
+  user_id: number;
+  domain: string;
+  panel_username: string;
+  panel_password: string;
+  panel_url: string;
+  status: string;
+  full_name?: string;
+  telegram_username?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Announcement {
+  id: number;
+  admin_id: number;
+  title: string;
+  content: string;
+  target_role: string | null;
+  created_at: string;
+}
