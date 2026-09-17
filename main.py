@@ -102,9 +102,12 @@ def run_scheduler():
 # ================== MAIN ==================
 if __name__ == "__main__":
     init_db()
+    from core.bot import setup_menu_button
+    setup_menu_button()
     threading.Thread(target=run_scheduler, daemon=True).start()
     logger.info("=" * 60)
     logger.info("🚀 BOT ENTERPRISE (Multi-File) READY TO DEPLOY")
     logger.info("✅ Status: Production Ready | Timezone: Asia/Jakarta")
     logger.info("=" * 60)
     bot.infinity_polling()
+

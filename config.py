@@ -13,3 +13,5 @@ if not BOT_TOKEN or BOT_TOKEN == "replace_with_token_from_botfather":
 SUPER_ADMIN_IDS = [int(x.strip()) for x in os.getenv("SUPER_ADMIN_IDS", "").split(",") if x.strip()]
 DB_NAME = os.getenv("DB_NAME", "data_member.db")
 VERIFICATION_EXPIRY_DAYS = int(os.getenv("VERIFICATION_EXPIRY_DAYS", "30"))
+WEBAPP_URL = os.getenv("WEBAPP_URL", "").strip()
+MENU_BUTTON_TITLE = os.getenv("MENU_BUTTON_TITLE", "App").strip() or "App"

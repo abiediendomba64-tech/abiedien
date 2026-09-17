@@ -23,3 +23,24 @@ def register_middlewares():
     register_ratelimit_middleware(bot)
 
 register_middlewares()
+
+def setup_menu_button():
+    """Konfigurasi Telegram Chat Menu Button agar ringkas dan tidak memakan lebar kolom chat di mobile."""
+    try:
+        from telebot.types import MenuButtonWebApp, WebAppInfo, MenuButtonCommands
+        from config import WEBAPP_URL, MENU_BUTTON_TITLE
+        
+        if WEBAPP_URL:
+            bot.set_chat_menu_button(
+                menu_button=MenuButtonWebApp(
+                    type="web_app",
+                    text=(MENU_BUTTON_TITLE or "App")[:10],
+                    web_app=WebAppInfo(url=WEBAPP_URL)
+                )
+            )
+        else:
+            bot.set_chat_menu_button(
+                menu_button=MenuButtonCommands(type="commands")
+            )
+    except Exception as e:
+        print(f"Warning: gagal mengatur chat menu button: {e}")
