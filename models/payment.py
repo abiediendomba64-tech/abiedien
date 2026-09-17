@@ -2,7 +2,7 @@ from core.database import safe_execute
 
 class Payment:
     @staticmethod
-    def create(user_id: int, proof_file_id: str, amount: str = None):
+    def create(user_id: int, proof_file_id: str, amount: str | None = None):
         safe_execute("""
             INSERT INTO payments (user_id, proof_file_id, amount, status)
             VALUES (?, ?, ?, 'pending')

@@ -1,4 +1,12 @@
 {
   "venvPath": "G:\\abiedien\\abiedien",
-  "venv": ".venv"
+  "venv": ".venv",
+  "include": ["."],
+  "exclude": ["src", "node_modules", ".venv"],
+  "extraPaths": ["."],
+  "executionEnvironments": [
+    {
+      "root": "."
+    }
+  ]
 }
