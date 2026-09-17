@@ -30,6 +30,22 @@ def panel_cmd(message):
         parse_mode="Markdown"
     )
 
+@bot.callback_query_handler(func=lambda call: call.data == "panel")
+@require_role('admin')
+def panel_menu_callback(call):
+    markup = types.InlineKeyboardMarkup(row_width=2)
+    markup.add(
+        types.InlineKeyboardButton("List Panel", callback_data="panel_list"),
+        types.InlineKeyboardButton("Buat Akun", callback_data="panel_create"),
+        types.InlineKeyboardButton("Kembali", callback_data="menu_admin")
+    )
+    bot.edit_message_text(
+        "*Manajemen Panel Backoffice*\n\nKelola akses panel untuk member terverifikasi.",
+        call.message.chat.id, call.message.message_id,
+        reply_markup=markup,
+        parse_mode="Markdown"
+    )
+
 @bot.callback_query_handler(func=lambda call: call.data == "panel_list")
 @require_role('admin')
 def panel_list_callback(call):
@@ -81,9 +97,20 @@ def panel_sendpass_callback(call):
     user_id = panel[1]
     domain = panel[2]
     username = panel[3]
-    password = panel[4]
     try:
         bot.send_message(
+            user_id,
+            f"*Akses Panel Backoffice*\n\n"
+            f"Domain: `{domain}`\n"
+            f"URL: `{domain}/backoffice`\n"
+            f"Username: `{username}`\n"
+            f"Password: `{password}`\n\n"
+            f"Simpan informasi ini dengan aman!",
+            parse_mode="Markdown"
+        )
+        bot.answer_callback_query(call.id, "Password terkirim ke member!", show_alert=True)
+    except Exception:
+        bot.answer_callback_query(call.id, "Gagal kirim. Mungkin user memblokir bot.", show_alert=True)
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("panel_resetpass_"))
 @require_role('admin')
@@ -200,16 +227,4 @@ def mypanel_cmd(message):
         f"Status: `{panel[7]}`\n\n"
         f"Simpan informasi ini dengan aman!",
         parse_mode="Markdown"
-    )
-            user_id,
-            f"*Akses Panel Backoffice*\n\n"
-            f"Domain: `{domain}`\n"
-            f"URL: `{domain}/backoffice`\n"
-            f"Username: `{username}`\n"
-            f"Password: `{password}`\n\n"
-            f"Simpan informasi ini dengan aman!",
-            parse_mode="Markdown"
-        )
-        bot.answer_callback_query(call.id, "Password terkirim ke member!", show_alert=True)
-    except Exception:
-        bot.answer_callback_query(call.id, "Gagal kirim. Mungkin user memblokir bot.", show_alert=True)
+    )

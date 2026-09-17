@@ -38,6 +38,25 @@ def theme_cmd(message):
         parse_mode="Markdown"
     )
 
+@bot.callback_query_handler(func=lambda call: call.data == "theme")
+@require_role('admin')
+def theme_menu_callback(call):
+    markup = types.InlineKeyboardMarkup(row_width=2)
+    markup.add(
+        types.InlineKeyboardButton("🎨 Lihat Tema", callback_data="theme_list"),
+        types.InlineKeyboardButton("➕ Buat Tema", callback_data="theme_create"),
+        types.InlineKeyboardButton("🌐 Landing Sync", callback_data="theme_landing"),
+        types.InlineKeyboardButton("🔙 Kembali", callback_data="menu_admin")
+    )
+    active = Theme.get_active()
+    active_name = active[1] if active else "Tidak ada"
+    bot.edit_message_text(
+        f"🎨 *Manajemen Tema*\n\nTema Aktif: `{active_name}`\n\nPilih aksi:",
+        call.message.chat.id, call.message.message_id,
+        reply_markup=markup,
+        parse_mode="Markdown"
+    )
+
 @bot.callback_query_handler(func=lambda call: call.data == "theme_list")
 @require_role('admin')
 def theme_list_callback(call):
@@ -80,6 +99,9 @@ def theme_detail_callback(call):
     markup.add(
         types.InlineKeyboardButton("Hapus", callback_data=f"theme_delete_{tid}"),
         types.InlineKeyboardButton("Kembali", callback_data="theme_list")
+    )
+    bot.edit_message_text(text, call.message.chat.id, call.message.message_id,
+                          reply_markup=markup, parse_mode="Markdown")
 
 @bot.callback_query_handler(func=lambda call: call.data == "theme_create")
 @require_role('admin')
@@ -126,10 +148,6 @@ def theme_accent_color_handler(message):
         data['accent_color'] = color
     bot.reply_to(message, "Masukkan warna background (hex, contoh: #0f172a):")
     bot.set_state(message.from_user.id, ThemeStates.waiting_bg_color, message.chat.id)
-    )
-    bot.edit_message_text(text, call.message.chat.id, call.message.message_id,
-                          reply_markup=markup, parse_mode="Markdown")
-
 
 @bot.message_handler(state=ThemeStates.waiting_bg_color)
 def theme_bg_color_handler(message):

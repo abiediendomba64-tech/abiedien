@@ -30,6 +30,22 @@ def announce_cmd(message):
         parse_mode="Markdown"
     )
 
+@bot.callback_query_handler(func=lambda call: call.data == "announce")
+@require_role('admin')
+def announce_menu_callback(call):
+    markup = types.InlineKeyboardMarkup(row_width=2)
+    markup.add(
+        types.InlineKeyboardButton("Buat Pengumuman", callback_data="ann_create"),
+        types.InlineKeyboardButton("Lihat Pengumuman", callback_data="ann_list"),
+        types.InlineKeyboardButton("Kembali", callback_data="menu_admin")
+    )
+    bot.edit_message_text(
+        "*Manajemen Pengumuman & Aturan*\n\nKirim informasi, aturan, atau update ke member.",
+        call.message.chat.id, call.message.message_id,
+        reply_markup=markup,
+        parse_mode="Markdown"
+    )
+
 @bot.callback_query_handler(func=lambda call: call.data == "ann_list")
 @require_role('admin')
 def ann_list_callback(call):
@@ -122,6 +138,21 @@ def ann_title_handler(message):
     bot.set_state(message.from_user.id, AnnouncementStates.waiting_content, message.chat.id)
 
 @bot.message_handler(state=AnnouncementStates.waiting_content)
+def ann_content_handler(message):
+    content = message.text.strip()
+    if len(content) < 5:
+        return bot.reply_to(message, "Konten minimal 5 karakter.")
+    with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
+        data['ann_content'] = content
+    markup = types.InlineKeyboardMarkup(row_width=2)
+    markup.add(
+        types.InlineKeyboardButton("Semua", callback_data="ann_target_all"),
+        types.InlineKeyboardButton("Member", callback_data="ann_target_member"),
+        types.InlineKeyboardButton("Admin", callback_data="ann_target_admin"),
+        types.InlineKeyboardButton("Dev", callback_data="ann_target_dev")
+    )
+    bot.reply_to(message, "Pilih target pengumuman:", reply_markup=markup)
+    bot.set_state(message.from_user.id, AnnouncementStates.waiting_target, message.chat.id)
 
 @bot.message_handler(state=AnnouncementStates.waiting_target)
 def ann_target_text_handler(message):
@@ -173,19 +204,4 @@ def info_cmd(message):
     text = "*PENGUMUMAN & INFO*\n\n"
     for a in anns[:10]:
         text += f"*{a[2]}*\n{a[3]}\n\n"
-    bot.reply_to(message, text, parse_mode="Markdown")
-def ann_content_handler(message):
-    content = message.text.strip()
-    if len(content) < 5:
-        return bot.reply_to(message, "Konten minimal 5 karakter.")
-    with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
-        data['ann_content'] = content
-    markup = types.InlineKeyboardMarkup(row_width=2)
-    markup.add(
-        types.InlineKeyboardButton("Semua", callback_data="ann_target_all"),
-        types.InlineKeyboardButton("Member", callback_data="ann_target_member"),
-        types.InlineKeyboardButton("Admin", callback_data="ann_target_admin"),
-        types.InlineKeyboardButton("Dev", callback_data="ann_target_dev")
-    )
-    bot.reply_to(message, "Pilih target pengumuman:", reply_markup=markup)
-    bot.set_state(message.from_user.id, AnnouncementStates.waiting_target, message.chat.id)
+    bot.reply_to(message, text, parse_mode="Markdown")
