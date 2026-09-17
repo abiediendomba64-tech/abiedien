@@ -20,6 +20,11 @@ class VerificationStates(StatesGroup):
 # ================== HANDLER START ==================
 @bot.message_handler(commands=['start', 'menu'])
 def start_command(message):
+    args = message.text.split()
+    if len(args) > 1 and args[1].lower() == 'login':
+        from handlers.auth import login_command
+        return login_command(message)
+
     uid = message.from_user.id
     user = User.get(uid)
     

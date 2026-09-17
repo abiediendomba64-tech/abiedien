@@ -17,7 +17,8 @@ from core.utils import check_domain_ownership
 from models.user import User
 
 # Import semua handler agar terdaftar
-from handlers import menu, verification, tickets, forum, payment, admin, theme, panel, announcement
+from handlers import menu, verification, tickets, forum, payment, admin, theme, panel, announcement, auth
+
 
 # ================== STRUCTURED LOGGING ==================
 logging.basicConfig(
