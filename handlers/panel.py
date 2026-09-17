@@ -97,6 +97,7 @@ def panel_sendpass_callback(call):
     user_id = panel[1]
     domain = panel[2]
     username = panel[3]
+    password = panel[4]
     try:
         bot.send_message(
             user_id,
